@@ -23,6 +23,7 @@ _C.DATA = CN()
 _C.DATA.BATCH_SIZE = 128
 # Path to dataset, could be overwritten by command line argument
 _C.DATA.DATA_PATH = ''
+_C.DATA.CSV_FILE = ''
 # Dataset name
 _C.DATA.DATASET = 'imagenet'
 # Input image size

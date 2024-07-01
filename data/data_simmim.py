@@ -12,7 +12,12 @@ import numpy as np
 import torch
 import torch.distributed as dist
 import torchvision.transforms as T
-from torch.utils.data import DataLoader, DistributedSampler
+import pandas as pd
+import cv2
+import time
+import os
+from PIL import Image
+from torch.utils.data import DataLoader, DistributedSampler, Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.datasets import ImageFolder
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
@@ -91,11 +96,41 @@ def collate_fn(batch):
         return ret
 
 
+class RadImageNetSimMIM(Dataset):
+    def __init__(self, root_dir, csv_file, transform, sigma: float = None, **kwargs):
+        super().__init__()
+        df = pd.read_csv(os.path.join(root_dir, csv_file))
+        images = list(df.iloc[:]["filename"])
+        images = [x for x in images if x.split("/")[1] == "US"]
+        self.images_path = [os.path.join(root_dir, x) for x in images]
+        self.transform = transform
+        self.sigma = sigma
+
+    def __getitem__(self, idx):
+        image = Image.open(self.images_path[idx]).convert("RGB")
+        if self.sigma is not None:
+            image_blur = cv2.GaussianBlur(np.array(image), (0, 0), self.sigma)
+            image_blur = Image.fromarray(image_blur)
+            seed = time.time()
+            torch.manual_seed(seed)
+            sample = self.transform(image)
+            torch.manual_seed(seed)
+            target = self.transform(image_blur)
+        else:
+            sample = self.transform(image)
+            target = image
+        return sample, target
+
+    def __len__(self):
+        return len(self.images_path)
+
+
 def build_loader_simmim(config, logger):
     transform = SimMIMTransform(config)
     logger.info(f'Pre-train data transform:\n{transform}')
 
     dataset = ImageFolder(config.DATA.DATA_PATH, transform)
+    # dataset = RadImageNetSimMIM(config.DATA.DATA_PATH, config.DATA.CSV_FILE, transform)
     logger.info(f'Build dataset: train images = {len(dataset)}')
     
     sampler = DistributedSampler(dataset, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True)

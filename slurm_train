@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+#SBATCH -A NAISS2023-5-359           # Account (project) - You might need to adjust this
+#SBATCH -p alvis                    # Partition (queue)
+#SBATCH -t 0-23:00:00               # Time limit (1 day)
+#SBATCH --gres=gpu:A100:4            # 4 GPUs
+#SBATCH --job-name=stnet           # Change "my_train_job" to a meaningful name
+#SBATCH -o slurm_outputs/slurm_output_%j.out      # Redirects stdout to a file (optional)
+#SBATCH -e slurm_outputs/slurm_error_%j.err       # Redirects stderr to a file (optional)
+#SBATCH --nodes=1                   # Request one node
+#SBATCH --ntasks-per-node=4         # Run 4 tasks on this node
+#SBATCH --cpus-per-task=16           # Request 8 CPUs (if required)
+
+mkdir -p slurm_outputs
+
+# Avoiding /home quota exceed
+export TORCH_HOME=/mimer/NOBACKUP/groups/alvis_cvl
+export PIP_CACHE_DIR=/mimer/NOBACKUP/groups/alvis_cvl
+export HF_HOME=/mimer/NOBACKUP/groups/alvis_cvl/
+
+export GPUS_PER_NODE=4
+export PYTHONPATH=$PYTHONPATH:/mimer/NOBACKUP/groups/alvis_cvl/Fahad/chaoqin/Experiments/USFM/SimMIM
+
+python -m torch.distributed.launch --nproc_per_node=$GPUS_PER_NODE \
+main_simmim.py --cfg configs/swin_base__100ep/simmim_pretrain_swin_base_rad_img224_window7_100ep.yaml \
+--batch-size 128 \
+--data-path /mimer/NOBACKUP/groups/alvis_cvl/Fahad/chaoqin/Dataset/RadImageNet/radiology_ai/US
