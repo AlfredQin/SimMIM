@@ -105,7 +105,7 @@ def main(config):
 
         train_one_epoch(config, model, data_loader_train, optimizer, epoch, lr_scheduler, scaler)
         if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
-            save_checkpoint(config, epoch, model_without_ddp, 0., optimizer, lr_scheduler, logger)
+            save_checkpoint(config, epoch, model_without_ddp, 0., optimizer, lr_scheduler, logger, scaler)
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
