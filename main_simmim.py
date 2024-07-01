@@ -144,7 +144,6 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler, 
                 optimizer.zero_grad()
                 lr_scheduler.step_update(epoch * num_steps + idx)
         else:
-            optimizer.zero_grad()
             if config.TRAIN.CLIP_GRAD:
                 scaler.unscale_(optimizer)
                 grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.TRAIN.CLIP_GRAD)
@@ -153,6 +152,7 @@ def train_one_epoch(config, model, data_loader, optimizer, epoch, lr_scheduler, 
                 grad_norm = torch.sqrt(sum(p.grad.norm()**2 for p in model.parameters() if p.grad is not None))
             scaler.step(optimizer)
             scaler.update()
+            optimizer.zero_grad()
             lr_scheduler.step_update(epoch * num_steps + idx)
 
         torch.cuda.synchronize()
